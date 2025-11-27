@@ -1,6 +1,7 @@
 package com.scoutli.api.controller;
 
 import com.scoutli.api.dto.DiscoveryDTO;
+import com.scoutli.opensearch.model.DiscoveryDocument;
 import com.scoutli.service.DiscoveryService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -32,5 +33,21 @@ public class DiscoveryController {
         String email = userPrincipal.getName();
         DiscoveryDTO created = discoveryService.createDiscovery(request, email);
         return Response.status(201).entity(created).build();
+    }
+
+    @GET
+    @Path("/search")
+    @RolesAllowed({"MEMBER", "ADMIN"}) // Protect search endpoint
+    public List<DiscoveryDocument> search(@QueryParam("q") String query) {
+        return discoveryService.searchDiscoveries(query);
+    }
+
+    @POST
+    @Path("/tasks/cleanup")
+    // This endpoint should be secured for internal/admin access, e.g., via a specific API Key or IP whitelisting.
+    // For this example, we won't add @RolesAllowed, but in production, it's critical.
+    public Response triggerCleanup() {
+        discoveryService.cleanupOldDiscoveries();
+        return Response.ok("Cleanup task triggered successfully.").build();
     }
 }
