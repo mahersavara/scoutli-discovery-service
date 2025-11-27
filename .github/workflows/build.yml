@@ -1,0 +1,69 @@
+name: scoutli-discovery-service CI
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'src/**'
+      - 'pom.xml'
+      - 'src/main/docker/Dockerfile.native'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  ECR_REPOSITORY: scoutli-discovery-service
+  AWS_REGION: ap-southeast-1
+
+jobs:
+  build-native:
+    name: Build Native Executable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Native Image with Maven
+        run: mvn package -Pnative -Dquarkus.native.container-build=true -DskipTests
+      - name: Upload Native Executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-executable
+          path: target/*-runner
+
+  push-to-ecr:
+    name: Push to AWS ECR
+    needs: build-native
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Native Executable
+        uses: actions/download-artifact@v4
+        with:
+          name: native-executable
+          path: target/
+      - name: Fix permissions
+        run: chmod +x target/*-runner
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f src/main/docker/Dockerfile.native -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker tag "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
