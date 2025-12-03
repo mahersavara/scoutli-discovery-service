@@ -7,16 +7,12 @@ import com.scoutli.domain.entity.Discovery;
 import com.scoutli.domain.entity.Tag;
 import com.scoutli.domain.repository.DiscoveryRepository;
 import com.scoutli.domain.repository.TagRepository;
-import com.scoutli.event.DiscoveryCreatedEvent;
 import com.scoutli.opensearch.model.DiscoveryDocument;
 import com.scoutli.opensearch.service.DiscoveryIndexerService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
-import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import io.smallrye.mutiny.Uni;
 
@@ -43,10 +39,6 @@ public class DiscoveryService {
 
     @Inject
     DiscoveryIndexerService discoveryIndexerService; // Inject OpenSearch indexer
-
-    @Inject
-    @Channel("discoveries-out") // Emitter for discovery events
-    Emitter<DiscoveryCreatedEvent> discoveryEventEmitter;
 
     public List<DiscoveryDTO> getAllDiscoveries() {
         log.debug("Fetching all discoveries");
@@ -104,28 +96,12 @@ public class DiscoveryService {
         discoveryRepository.persist(discovery);
         log.info("Discovery created with ID: {}", discovery.getId());
 
-        // Publish event to Kafka for OpenSearch indexing (decoupled)
-        discoveryEventEmitter.send(DiscoveryCreatedEvent.fromDiscovery(discovery));
-
         return toDTO(discovery);
     }
 
     public List<DiscoveryDocument> searchDiscoveries(String query) {
         log.info("Searching discoveries for query: {}", query);
         return discoveryIndexerService.searchDiscoveries(query);
-    }
-
-    @Incoming("discovery-events-in") // Kafka consumer for discovery events
-    public Uni<Void> processDiscoveryEvents(DiscoveryCreatedEvent event) {
-        log.info("Received DiscoveryCreatedEvent for ID: {}", event.id);
-        // Convert the event back to DiscoveryDocument for indexing
-        DiscoveryDocument doc = new DiscoveryDocument(
-                event.id, event.name, event.description, event.streetAddress,
-                event.city, event.country, event.latitude, event.longitude,
-                event.userEmail, event.tags
-        );
-        discoveryIndexerService.indexDiscovery(doc); // Index in OpenSearch
-        return Uni.createFrom().voidItem(); // Acknowledge the message
     }
 
     private DiscoveryDTO toDTO(Discovery discovery) {
