@@ -1,4 +1,4 @@
-package com.scoutli.discovery.entity;
+package com.scoutli.domain.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
@@ -17,27 +17,27 @@ public class Location extends PanacheEntityBase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+    private Long id;
 
     @Column(nullable = false)
-    public String name;
+    private String name;
 
     @Column(columnDefinition = "TEXT")
-    public String description;
+    private String description;
 
-    public String address;
+    private String address;
 
     @Column(name = "category_id")
-    public Long categoryId;
+    private Long categoryId;
 
-    public Double latitude;
-    public Double longitude;
+    private Double latitude;
+    private Double longitude;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    public LocalDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
-    public LocalDateTime updatedAt;
+    private LocalDateTime updatedAt;
 }

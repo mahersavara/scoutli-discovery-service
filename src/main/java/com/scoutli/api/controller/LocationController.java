@@ -1,6 +1,6 @@
-package com.scoutli.discovery.resource;
+package com.scoutli.api.controller;
 
-import com.scoutli.discovery.entity.Location;
+import com.scoutli.domain.entity.Location;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -11,7 +11,7 @@ import java.util.List;
 @Path("/api/locations")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class LocationResource {
+public class LocationController {
 
     @GET
     public List<Location> getAll() {

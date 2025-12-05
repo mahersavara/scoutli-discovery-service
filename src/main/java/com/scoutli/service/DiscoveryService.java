@@ -14,7 +14,6 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
-import io.smallrye.mutiny.Uni;
 
 import java.util.List;
 import java.util.Optional;
@@ -51,11 +50,13 @@ public class DiscoveryService {
     public DiscoveryDTO createDiscovery(DiscoveryDTO.CreateRequest request, String userEmail) {
         log.info("Creating discovery: {} for user: {}", request.name, userEmail);
 
-        // Example of inter-service communication: Fetching User details from Auth Service
+        // Example of inter-service communication: Fetching User details from Auth
+        // Service
         // Using Uni<T> and blocking for simplicity in a @Transactional method
         Optional<UserDTO> userDetailsOptional = authServiceRestClient.getMyUserDetails()
-                .onFailure().invoke(failure -> log.warn("Could not fetch user details from Auth Service: {}", failure.getMessage()))
-                .onItem().transformToOptional(Optional::of)
+                .onFailure()
+                .invoke(failure -> log.warn("Could not fetch user details from Auth Service: {}", failure.getMessage()))
+                .onItem().transform(Optional::of)
                 .await().indefinitely(); // Block until Uni emits an item or fails
 
         if (userDetailsOptional.isPresent()) {
@@ -63,7 +64,8 @@ public class DiscoveryService {
             log.info("Fetched user details from Auth Service: {}", userDetails);
             // You can now use userDetails.id, userDetails.role etc.
         } else {
-            log.warn("Proceeding with discovery creation using only userEmail due to failure to fetch user details from Auth Service.");
+            log.warn(
+                    "Proceeding with discovery creation using only userEmail due to failure to fetch user details from Auth Service.");
         }
 
         Discovery discovery = new Discovery();
