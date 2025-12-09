@@ -9,3 +9,5 @@ target/
 *.log
 *.pem
 .DS_Store
+
+.env
